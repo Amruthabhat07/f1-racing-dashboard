@@ -42,4 +42,24 @@ export const getRaces = async (req, res) => {
   }
 };
 
+// GET /api/f1/drivers/:driverNumber
+export const getDriverByNumber = async (req, res) => {
+  try {
+    const { driverNumber } = req.params;
+
+    const driver = await Driver.findOne({
+      driver_number: Number(driverNumber)
+    });
+
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    res.status(200).json(driver);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Failed to fetch driver" });
+  }
+};
+
 
