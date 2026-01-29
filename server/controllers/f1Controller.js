@@ -1,20 +1,21 @@
 import Driver from "../models/Driver.js";
-import Race from "../models/Race.js";
-import { fetchDrivers, fetchRaces } from "../services/openF1Service.js";
+import { fetchCurrentRaceDrivers } from "../services/openF1Service.js";
+import axios from "axios";
 
-// GET /api/f1/drivers
+// ===============================
+// GET ALL DRIVERS (CURRENT GRID)
+// ===============================
 export const getDrivers = async (req, res) => {
   try {
-    // 1. Check cache
+    
+
     const cachedDrivers = await Driver.find();
+
     if (cachedDrivers.length > 0) {
       return res.status(200).json(cachedDrivers);
     }
 
-    // 2️. Fetch from OpenF1
-    const drivers = await fetchDrivers();
-
-    // 3️. Save to MongoDB
+    const drivers = await fetchCurrentRaceDrivers();
     await Driver.insertMany(drivers);
 
     res.status(200).json(drivers);
@@ -24,31 +25,15 @@ export const getDrivers = async (req, res) => {
   }
 };
 
-// GET /api/f1/races
-export const getRaces = async (req, res) => {
-  try {
-    const cachedRaces = await Race.find();
-    if (cachedRaces.length > 0) {
-      return res.status(200).json(cachedRaces);
-    }
-
-    const races = await fetchRaces();
-    await Race.insertMany(races);
-
-    res.status(200).json(races);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: "Failed to fetch races" });
-  }
-};
-
-// GET /api/f1/drivers/:driverNumber
+// ===============================
+// GET SINGLE DRIVER BY NUMBER
+// ===============================
 export const getDriverByNumber = async (req, res) => {
   try {
     const { driverNumber } = req.params;
 
     const driver = await Driver.findOne({
-      driver_number: Number(driverNumber)
+      driver_number: Number(driverNumber),
     });
 
     if (!driver) {
@@ -62,4 +47,19 @@ export const getDriverByNumber = async (req, res) => {
   }
 };
 
+// ===============================
+// GET RACES (BASIC VERSION)
+// ===============================
+export const getRaces = async (req, res) => {
+  try {
+    // Fetch race sessions only
+    const response = await axios.get(
+      "https://api.openf1.org/v1/sessions?session_name=Race"
+    );
 
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Failed to fetch races" });
+  }
+};
