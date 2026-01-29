@@ -31,3 +31,32 @@ export const fetchCurrentRaceDrivers = async () => {
     return [];
   }
 };
+    // added lap time data functions
+export const fetchDriverLapStats = async (driverNumber) => {
+  try {
+    const response = await axios.get(
+      `https://api.openf1.org/v1/laps?driver_number=${driverNumber}`
+    );
+
+    const laps = response.data
+      .map(lap => lap.lap_duration)
+      .filter(Boolean);
+
+    if (laps.length === 0) {
+      return { bestLap: null, avgLap: null };
+    }
+
+    const bestLap = Math.min(...laps);
+    const avgLap =
+      laps.reduce((sum, lap) => sum + lap, 0) / laps.length;
+
+    return {
+      bestLap: Number(bestLap.toFixed(2)),
+      avgLap: Number(avgLap.toFixed(2)),
+    };
+  } catch (error) {
+    console.error("Lap fetch failed:", error.message);
+    return { bestLap: null, avgLap: null };
+  }
+};
+
