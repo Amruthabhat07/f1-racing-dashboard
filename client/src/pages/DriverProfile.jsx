@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, Link } from "react-router-dom";
+import LapTimeChart from "../components/LapTimeChart";
 
 function DriverProfile() {
   const { driverNumber } = useParams();
 
   const [driver, setDriver] = useState(null);
   const [stats, setStats] = useState(null);
+  const [laps, setLaps] = useState([]);
+
 
   useEffect(() => {
     axios
@@ -18,6 +21,12 @@ function DriverProfile() {
       .get(`/api/f1/drivers/${driverNumber}/laps`)
       .then((res) => setStats(res.data))
       .catch((err) => console.error(err));
+
+    axios
+      .get(`/api/f1/drivers/${driverNumber}/laps/raw`)
+      .then(res => setLaps(res.data))
+      .catch(err => console.error(err));
+
   }, [driverNumber]);
 
   if (!driver || !stats) return <p>Loading...</p>;
@@ -49,12 +58,15 @@ function DriverProfile() {
         <p>🔴 Worst Lap: {stats.worstLap}s</p>
         <p>📊 Average Lap: {stats.avgLap}s</p>
 
+
         {stats.pitLaps?.length > 0 && (
           <p className="mt-1">
             🟡 Pit-affected laps: {stats.pitLaps.join(", ")}
           </p>
         )}
       </div>
+      {/* LAP TIME CHART */}
+      <LapTimeChart laps={laps} pitLaps={stats.pitLaps} />
     </div>
   );
 }

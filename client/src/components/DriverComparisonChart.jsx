@@ -45,23 +45,32 @@ function DriverComparisonChart({ driverA, driverB }) {
   }
 
   const data = [
-    {
-      metric: "Best Lap (s)",
-      DriverA: statsA.bestLap,
-      DriverB: statsB.bestLap,
-    },
-    {
-      metric: "Average Lap (s)",
-      DriverA: statsA.avgLap,
-      DriverB: statsB.avgLap,
-    },
-  ];
+  {
+    metric: "Best Lap (s)",
+    DriverA: statsA.bestLap,
+    DriverB: statsB.bestLap,
+  },
+  {
+    metric: "Average Lap (s)",
+    DriverA: statsA.avgLap,
+    DriverB: statsB.avgLap,
+  },
+  {
+    metric: "Consistency Score",
+    DriverA: statsA.consistencyScore,
+    DriverB: statsB.consistencyScore,
+  },
+];
+
 
   return (
     <div className="bg-[#111827] p-6 rounded-xl border border-gray-800">
       <h2 className="text-xl font-bold mb-4 text-center">
         Lap Time Comparison
       </h2>
+    <p className="text-center text-gray-400 text-sm mb-3">
+  Higher consistency score = more reliable lap performance
+</p>
 
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data}>
