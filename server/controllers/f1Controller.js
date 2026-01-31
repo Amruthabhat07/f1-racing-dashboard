@@ -2,6 +2,7 @@ import Driver from "../models/Driver.js";
 import { fetchCurrentRaceDrivers } from "../services/openF1Service.js";
 import axios from "axios";
 import { fetchDriverLapStats } from "../services/openF1Service.js";
+import { fetchDriverRaceMomentum } from "../services/openF1Service.js";
 
 // ===============================
 // GET ALL DRIVERS (CURRENT GRID)
@@ -81,4 +82,23 @@ export const getDriverLapStats = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch lap stats" });
   }
 };
+
+// ===============================
+// GET position in each lap
+// ===============================
+
+
+export const getDriverMomentum = async (req, res) => {
+  try {
+    const { driverNumber } = req.params;
+
+    const momentum = await fetchDriverRaceMomentum(driverNumber);
+
+    res.status(200).json(momentum);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Failed to fetch race momentum" });
+  }
+};
+
 

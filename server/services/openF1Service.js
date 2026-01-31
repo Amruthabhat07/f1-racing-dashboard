@@ -1,6 +1,92 @@
 import axios from "axios";
+import {
+  computeLapStats,
+  computeSmartLapInsights,
+} from "./statsService.js";
 
 const OPENF1_BASE_URL = "https://api.openf1.org/v1";
+const raceMomentumCache = new Map();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+export const fetchDriverLapStats = async (driverNumber) => {
+  try {
+    // 1️⃣ Get latest meeting
+    const meetingsRes = await axios.get(
+      `${OPENF1_BASE_URL}/meetings`
+    );
+
+    if (!meetingsRes.data.length) {
+      throw new Error("No meetings available");
+    }
+
+    const latestMeeting = meetingsRes.data.at(-1);
+
+    // 2️⃣ Get sessions
+    const sessionsRes = await axios.get(
+      `${OPENF1_BASE_URL}/sessions?meeting_key=${latestMeeting.meeting_key}`
+    );
+
+    // 3️⃣ Find race-like session (IMPORTANT FIX)
+    const raceSession = sessionsRes.data.find(
+      s => s.session_name?.toLowerCase().includes("race")
+    );
+
+    if (!raceSession) {
+      throw new Error("No race session available");
+    }
+
+    // 4️⃣ Fetch laps for this race + driver
+    const lapsRes = await axios.get(
+      `${OPENF1_BASE_URL}/laps?session_key=${raceSession.session_key}&driver_number=${driverNumber}`
+    );
+
+    // 5️⃣ Filter realistic laps
+    const validLaps = lapsRes.data.filter(
+      l =>
+        l.lap_duration &&
+        l.lap_duration > 60 &&
+        l.lap_duration < 200
+    );
+
+    // ✅ DEMO FALLBACK MUST BE HERE
+    if (validLaps.length === 0) {
+      const demoLaps = Array.from({ length: 55 }, (_, i) => ({
+        lap_number: i + 1,
+        lap_duration: 88 + Math.random() * 6,
+      }));
+
+      return {
+        ...computeLapStats(demoLaps),
+        ...computeSmartLapInsights(demoLaps),
+        demo: true,
+      };
+    }
+
+    // ✅ REAL DATA
+    return {
+      ...computeLapStats(validLaps),
+      ...computeSmartLapInsights(validLaps),
+      demo: false,
+    };
+
+  } catch (error) {
+    console.warn("Lap stats fallback:", error.message);
+
+    // FINAL SAFETY FALLBACK
+    const demoLaps = Array.from({ length: 55 }, (_, i) => ({
+      lap_number: i + 1,
+      lap_duration: 88 + Math.random() * 6,
+    }));
+
+    return {
+      ...computeLapStats(demoLaps),
+      ...computeSmartLapInsights(demoLaps),
+      demo: true,
+    };
+  }
+};
+
+
 
 export const fetchCurrentRaceDrivers = async () => {
   try {
@@ -31,32 +117,68 @@ export const fetchCurrentRaceDrivers = async () => {
     return [];
   }
 };
-    // added lap time data functions
-export const fetchDriverLapStats = async (driverNumber) => {
+
+//find race momentum in each lap -position
+
+export const fetchDriverRaceMomentum = async (driverNumber) => {
+  const cached = raceMomentumCache.get(driverNumber);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
   try {
-    const response = await axios.get(
-      `https://api.openf1.org/v1/laps?driver_number=${driverNumber}`
+    // 1️⃣ Get latest meeting
+    const meetingsRes = await axios.get(
+      `${OPENF1_BASE_URL}/meetings`
     );
 
-    const laps = response.data
-      .map(lap => lap.lap_duration)
-      .filter(Boolean);
+    if (!meetingsRes.data.length) return [];
 
-    if (laps.length === 0) {
-      return { bestLap: null, avgLap: null };
-    }
+    const latestMeeting = meetingsRes.data.at(-1);
+    const meetingKey = latestMeeting.meeting_key;
 
-    const bestLap = Math.min(...laps);
-    const avgLap =
-      laps.reduce((sum, lap) => sum + lap, 0) / laps.length;
+    // 2️⃣ Get race session
+    const sessionsRes = await axios.get(
+      `${OPENF1_BASE_URL}/sessions?meeting_key=${meetingKey}`
+    );
 
-    return {
-      bestLap: Number(bestLap.toFixed(2)),
-      avgLap: Number(avgLap.toFixed(2)),
-    };
+    const raceSession = sessionsRes.data.find(s =>
+      s.session_name?.toLowerCase().includes("race")
+    );
+
+    if (!raceSession) return [];
+
+    // 3️⃣ Fetch laps
+    const lapsRes = await axios.get(
+      `${OPENF1_BASE_URL}/laps?session_key=${raceSession.session_key}&driver_number=${driverNumber}`
+    );
+
+    const data = lapsRes.data
+      .filter(l => l.lap_number && l.position)
+      .map(l => ({
+        lap: l.lap_number,
+        position: l.position,
+      }))
+      .sort((a, b) => a.lap - b.lap);
+
+    // ✅ Cache result
+    raceMomentumCache.set(driverNumber, {
+      data,
+      timestamp: Date.now(),
+    });
+
+    return data;
   } catch (error) {
-    console.error("Lap fetch failed:", error.message);
-    return { bestLap: null, avgLap: null };
+    if (error.response?.status === 429) {
+      console.warn("OpenF1 rate limit hit — using fallback");
+    } else {
+      console.error("Race momentum error:", error.message);
+    }
+    return [];
   }
 };
+
+    
+
 

@@ -13,29 +13,47 @@ import {
 function DriverComparisonChart({ driverA, driverB }) {
   const [statsA, setStatsA] = useState(null);
   const [statsB, setStatsB] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`/api/f1/drivers/${driverA.driver_number}/laps`)
-      .then(res => setStatsA(res.data));
+    setLoading(true);
 
-    axios
-      .get(`/api/f1/drivers/${driverB.driver_number}/laps`)
-      .then(res => setStatsB(res.data));
+    Promise.all([
+      axios.get(`/api/f1/drivers/${driverA.driver_number}/laps`),
+      axios.get(`/api/f1/drivers/${driverB.driver_number}/laps`),
+    ]).then(([resA, resB]) => {
+      setStatsA(resA.data);
+      setStatsB(resB.data);
+      setLoading(false);
+    });
   }, [driverA, driverB]);
 
-  if (!statsA || !statsB) return null;
+  if (loading) {
+    return (
+      <p className="text-center text-gray-400">
+        Loading lap comparison…
+      </p>
+    );
+  }
+
+  if (!statsA.bestLap || !statsB.bestLap) {
+    return (
+      <p className="text-center text-gray-400">
+        Lap data not available for selected drivers
+      </p>
+    );
+  }
 
   const data = [
     {
       metric: "Best Lap (s)",
-      [driverA.full_name]: statsA.bestLap,
-      [driverB.full_name]: statsB.bestLap,
+      DriverA: statsA.bestLap,
+      DriverB: statsB.bestLap,
     },
     {
       metric: "Average Lap (s)",
-      [driverA.full_name]: statsA.avgLap,
-      [driverB.full_name]: statsB.avgLap,
+      DriverA: statsA.avgLap,
+      DriverB: statsB.avgLap,
     },
   ];
 
@@ -51,13 +69,13 @@ function DriverComparisonChart({ driverA, driverB }) {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey={driverA.full_name} fill="#dc2626" />
-          <Bar dataKey={driverB.full_name} fill="#2563eb" />
+          <Bar name={driverA.full_name} dataKey="DriverA" fill="#dc2626" />
+          <Bar name={driverB.full_name} dataKey="DriverB" fill="#2563eb" />
         </BarChart>
       </ResponsiveContainer>
 
       <p className="text-center text-gray-400 mt-4 text-sm">
-        Lower lap time = faster driver
+        Lower lap time indicates faster performance
       </p>
     </div>
   );
