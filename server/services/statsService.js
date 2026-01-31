@@ -61,3 +61,22 @@ export const computeSmartLapInsights = (laps) => {
     pitLaps,
   };
 };
+
+export const computeConsistencyScore = (laps) => {
+  const lapTimes = laps
+    .map(l => l.lap_duration)
+    .filter(Boolean);
+
+  if (lapTimes.length < 2) return null;
+
+  const avg =
+    lapTimes.reduce((s, l) => s + l, 0) / lapTimes.length;
+
+  const variance =
+    lapTimes.reduce((s, l) => s + Math.pow(l - avg, 2), 0) /
+    lapTimes.length;
+
+  const stdDev = Math.sqrt(variance);
+
+  return Number((1 / stdDev).toFixed(4));
+};

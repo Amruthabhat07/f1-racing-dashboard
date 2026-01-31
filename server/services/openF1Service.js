@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   computeLapStats,
   computeSmartLapInsights,
+  computeConsistencyScore,
 } from "./statsService.js";
 
 const OPENF1_BASE_URL = "https://api.openf1.org/v1";
@@ -26,16 +27,16 @@ export const fetchDriverLapStats = async (driverNumber) => {
       `${OPENF1_BASE_URL}/sessions?meeting_key=${latestMeeting.meeting_key}`
     );
 
-    // 3️⃣ Find race-like session (IMPORTANT FIX)
+    // 3️⃣ Find race-like session
     const raceSession = sessionsRes.data.find(
       s => s.session_name?.toLowerCase().includes("race")
     );
 
     if (!raceSession) {
-      throw new Error("No race session available");
+      throw new Error("No race session found");
     }
 
-    // 4️⃣ Fetch laps for this race + driver
+    // 4️⃣ Fetch laps
     const lapsRes = await axios.get(
       `${OPENF1_BASE_URL}/laps?session_key=${raceSession.session_key}&driver_number=${driverNumber}`
     );
@@ -48,31 +49,23 @@ export const fetchDriverLapStats = async (driverNumber) => {
         l.lap_duration < 200
     );
 
-    // ✅ DEMO FALLBACK MUST BE HERE
+    // 6️⃣ DEMO fallback if no valid laps
     if (validLaps.length === 0) {
-      const demoLaps = Array.from({ length: 55 }, (_, i) => ({
-        lap_number: i + 1,
-        lap_duration: 88 + Math.random() * 6,
-      }));
-
-      return {
-        ...computeLapStats(demoLaps),
-        ...computeSmartLapInsights(demoLaps),
-        demo: true,
-      };
+      throw new Error("No valid laps");
     }
 
-    // ✅ REAL DATA
+    // ✅ REAL DATA RETURN
     return {
       ...computeLapStats(validLaps),
       ...computeSmartLapInsights(validLaps),
+      consistencyScore: computeConsistencyScore(validLaps),
       demo: false,
     };
 
   } catch (error) {
-    console.warn("Lap stats fallback:", error.message);
+    console.warn("Lap stats demo fallback:", error.message);
 
-    // FINAL SAFETY FALLBACK
+    // ✅ ALWAYS return demo data on ANY failure
     const demoLaps = Array.from({ length: 55 }, (_, i) => ({
       lap_number: i + 1,
       lap_duration: 88 + Math.random() * 6,
@@ -81,10 +74,12 @@ export const fetchDriverLapStats = async (driverNumber) => {
     return {
       ...computeLapStats(demoLaps),
       ...computeSmartLapInsights(demoLaps),
+      consistencyScore: computeConsistencyScore(demoLaps),
       demo: true,
     };
   }
 };
+
 
 
 
