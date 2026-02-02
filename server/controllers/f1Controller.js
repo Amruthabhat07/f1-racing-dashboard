@@ -3,6 +3,8 @@ import { fetchCurrentRaceDrivers } from "../services/openF1Service.js";
 import axios from "axios";
 import { fetchDriverLapStats } from "../services/openF1Service.js";
 import { fetchDriverRaceMomentum } from "../services/openF1Service.js";
+import { predictRaceOutcome } from "../services/predictionService.js";
+
 
 const OPENF1_BASE_URL = "https://api.openf1.org/v1";
 
@@ -160,6 +162,32 @@ export const getDriverRawLaps = async (req, res) => {
     res.json(demoLaps);
   }
 };
+
+
+
+export const getRacePrediction = async (req, res) => {
+  try {
+    const { driverNumber } = req.params;
+
+    // reuse your existing lap stats service
+    const stats = await fetchDriverLapStats(driverNumber);
+
+    const prediction = predictRaceOutcome({
+      avgLap: stats.avgLap,
+      consistencyScore: stats.consistencyScore,
+      trackDifficulty: 1.1, // simple static value for now
+    });
+
+    res.json({
+      ...prediction,
+      demo: stats.demo,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Prediction failed" });
+  }
+};
+
 
 
 

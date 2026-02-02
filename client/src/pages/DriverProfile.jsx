@@ -9,7 +9,7 @@ function DriverProfile() {
   const [driver, setDriver] = useState(null);
   const [stats, setStats] = useState(null);
   const [laps, setLaps] = useState([]);
-
+  const [prediction, setPrediction] = useState(null);
 
   useEffect(() => {
     axios
@@ -26,6 +26,12 @@ function DriverProfile() {
       .get(`/api/f1/drivers/${driverNumber}/laps/raw`)
       .then(res => setLaps(res.data))
       .catch(err => console.error(err));
+
+    axios
+     .get(`/api/f1/predict/${driverNumber}`)
+     .then(res => setPrediction(res.data))
+     .catch(err => console.error(err));
+
 
   }, [driverNumber]);
 
@@ -65,6 +71,54 @@ function DriverProfile() {
           </p>
         )}
       </div>
+
+      
+      {/* prediction*/}
+      {prediction && (
+  <div className="mt-6 bg-[#0f172a] border border-indigo-900 rounded-lg p-5">
+    <div className="flex items-center justify-between">
+      <h3 className="text-lg font-bold text-indigo-400">
+        🧠 AI Race Outcome Prediction
+      </h3>
+
+      {prediction.demo && (
+        <span className="text-xs bg-yellow-600 text-black px-2 py-1 rounded">
+          DEMO
+        </span>
+      )}
+    </div>
+
+    <p className="mt-3 text-xl font-semibold">
+      Predicted Finish:{" "}
+      <span className="text-green-400">
+        {prediction.predictedRange}
+      </span>
+    </p>
+
+    {/* Confidence bar */}
+    <div className="mt-3">
+      <p className="text-sm text-gray-400 mb-1">
+        Confidence: {Math.round(prediction.confidence * 100)}%
+      </p>
+      <div className="w-full bg-gray-800 rounded-full h-2">
+        <div
+          className="bg-indigo-500 h-2 rounded-full"
+          style={{
+            width: `${prediction.confidence * 100}%`,
+          }}
+        />
+      </div>
+    </div>
+
+    {/* Reasoning */}
+    <ul className="mt-4 text-sm text-gray-300 list-disc list-inside">
+      {prediction.reasons.map((reason, idx) => (
+        <li key={idx}>{reason}</li>
+      ))}
+    </ul>
+  </div>
+)}
+
       {/* LAP TIME CHART */}
       <LapTimeChart laps={laps} pitLaps={stats.pitLaps} />
     </div>

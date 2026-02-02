@@ -7,7 +7,7 @@ import {
 import { getDriverLapStats } from "../controllers/f1Controller.js";
 import { getDriverMomentum } from "../controllers/f1Controller.js";
 import { getDriverRawLaps } from "../controllers/f1Controller.js";
-
+import { getRacePrediction } from "../controllers/f1Controller.js";
 
 
 const router = express.Router();
@@ -18,6 +18,8 @@ router.get("/races", getRaces);
 router.get("/drivers/:driverNumber/laps", getDriverLapStats);
 router.get("/drivers/:driverNumber/momentum", getDriverMomentum);
 router.get("/drivers/:driverNumber/laps/raw", getDriverRawLaps);
+router.get("/predict/:driverNumber", getRacePrediction);
+
 
 
 export default router;

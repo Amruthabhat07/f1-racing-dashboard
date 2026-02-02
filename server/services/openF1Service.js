@@ -4,6 +4,7 @@ import {
   computeSmartLapInsights,
   computeConsistencyScore,
 } from "./statsService.js";
+import Driver from "../models/Driver.js";
 
 const OPENF1_BASE_URL = "https://api.openf1.org/v1";
 const raceMomentumCache = new Map();
@@ -82,15 +83,12 @@ export const fetchDriverLapStats = async (driverNumber) => {
 
 
 
-
 export const fetchCurrentRaceDrivers = async () => {
   try {
-    // 1️⃣ Fetch drivers from current season (not session-dependent)
     const driversRes = await axios.get(
       `${OPENF1_BASE_URL}/drivers`
     );
 
-    // 2️⃣ Filter to realistic F1 race drivers
     const filtered = driversRes.data.filter(
       d =>
         d.driver_number &&
@@ -98,20 +96,36 @@ export const fetchCurrentRaceDrivers = async () => {
         d.driver_number <= 99
     );
 
-    // 3️⃣ Deduplicate by driver number
     const uniqueDrivers = Array.from(
       new Map(
         filtered.map(d => [d.driver_number, d])
       ).values()
-    );
+    ).slice(0, 25);
 
-    // 4️⃣ Limit to ~20–25 drivers
-    return uniqueDrivers.slice(0, 25);
+    // 🔹 SAVE / UPDATE DRIVERS IN DB (WITH IMAGE)
+    for (const d of uniqueDrivers) {
+      await Driver.findOneAndUpdate(
+        { driver_number: d.driver_number },
+        {
+          driver_number: d.driver_number,
+          full_name: d.full_name,
+          team_name: d.team_name,
+          name_acronym: d.name_acronym,
+          country_code: d.country_code,
+          broadcast_name: d.broadcast_name,
+          headshot_url: d.headshot_url || null,
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    return uniqueDrivers;
   } catch (error) {
     console.error("OpenF1 driver fetch failed:", error.message);
     return [];
   }
 };
+
 
 //find race momentum in each lap -position
 

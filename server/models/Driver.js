@@ -7,8 +7,10 @@ const driverSchema = new mongoose.Schema(
     name_acronym: String,
     team_name: String,
     country_code: String,
-    broadcast_name: String
-  },
+    broadcast_name: String,
+    headshot_url:String,
+},
+
   { timestamps: true }
 );
 
