@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 
 import authRoutes from "./routes/authRoutes.js";
 import f1Routes from "./routes/f1Routes.js";
+import userRoutes from "./routes/userRoutes.js";
+
 
 dotenv.config();
 
@@ -15,6 +17,7 @@ app.use(express.json()); // ✅ now express is defined
 
 app.use("/api/auth", authRoutes);
 app.use("/api/f1", f1Routes);
+app.use("/api/user", userRoutes);
 
 const PORT = process.env.PORT || 5000;
 
